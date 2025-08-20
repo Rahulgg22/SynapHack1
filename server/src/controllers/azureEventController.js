@@ -2,7 +2,8 @@ const azure = require('../utils/azureQueries');
 
 exports.createEvent = async (req, res, next) => {
   try {
-    const event = await azure.createEvent(req.body);
+    const mapped = mapIncomingEventPayload(req.body);
+    const event = await azure.createEvent(mapped);
     res.status(201).json(event);
   } catch (err) { next(err); }
 };
@@ -16,8 +17,8 @@ exports.createEventAsOrganizer = async (req, res, next) => {
   try {
     const user_id = req.user.user_id || req.user.id;
     console.log('[Controller] User ID:', user_id);
-    
-    const result = await azure.createEventWithOrganizer(req.body, user_id);
+    const mapped = mapIncomingEventPayload(req.body);
+    const result = await azure.createEventWithOrganizer(mapped, user_id);
     console.log('[Controller] Event created successfully:', result);
     
     res.status(201).json({
@@ -68,3 +69,29 @@ exports.getAllEvents = async (req, res, next) => {
     next(err); 
   }
 };
+
+function mapIncomingEventPayload(body) {
+  // Map frontend fields to DB columns and provide sane defaults
+  const toDate = (v) => (v ? new Date(v) : null);
+  const toInt = (v, d) => {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) ? n : d;
+  };
+  return {
+    title: body.title || body.name || null,
+    theme: body.theme || body.domain || null,
+    description: body.description || null,
+    mode: body.mode || 'online',
+    start_date: toDate(body.start_date),
+    end_date: toDate(body.end_date),
+    registration_deadline: toDate(body.registration_deadline),
+    max_team_size: toInt(body.max_team_size, 4),
+    status: body.status || 'upcoming',
+    rules: body.rules || null,
+    prizes: body.prizes || null,
+    sponsor_info: body.sponsor_info || null,
+    banner_url: body.banner_url || null,
+    location: body.location || null,
+    created_by: body.created_by || null,
+  };
+}

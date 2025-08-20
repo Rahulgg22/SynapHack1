@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { checkOrganizerStatus } from "../api/events";
+import { fetchMyPendingInvites } from "../api/userEventRoles";
 
 const AuthContext = createContext({ role: "user", setRole: () => {} });
 
@@ -29,6 +30,12 @@ export function AuthProvider({ children }) {
         if (res?.isOrganizer) {
           setRole("organizer");
           localStorage.setItem("role", "organizer");
+        }
+        // If not organizer, and has pending judge invites, keep role user until acceptance
+        // This block can later be extended to auto elevate upon acceptance action
+        const invites = await fetchMyPendingInvites();
+        if (!res?.isOrganizer && Array.isArray(invites) && invites.length > 0) {
+          // We keep role as user until they accept, but we could surface a UI badge.
         }
       } catch {
         // ignore

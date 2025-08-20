@@ -3,7 +3,7 @@ import { createEventAsOrganizer } from "../api/events";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateEvent() {
-  const [form, setForm] = useState({ name: "", description: "", start_date: "", end_date: "" });
+  const [form, setForm] = useState({ name: "", description: "", start_date: "", end_date: "", registration_deadline: "", banner_url: "", domain: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -46,8 +46,15 @@ export default function CreateEvent() {
               <input name="name" value={form.name} onChange={handleChange} placeholder="Event Name" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
               <textarea name="description" value={form.description} onChange={handleChange} placeholder="Description" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white min-h-36" />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input name="start_date" value={form.start_date} onChange={handleChange} placeholder="Start Date (YYYY-MM-DD)" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
-                <input name="end_date" value={form.end_date} onChange={handleChange} placeholder="End Date (YYYY-MM-DD)" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
+                <input type="date" name="start_date" value={form.start_date} onChange={handleChange} placeholder="Start Date" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
+                <input type="date" name="end_date" value={form.end_date} onChange={handleChange} placeholder="End Date" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input type="date" name="registration_deadline" value={form.registration_deadline} onChange={handleChange} placeholder="Registration Deadline" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
+                <input name="banner_url" value={form.banner_url} onChange={handleChange} placeholder="Banner Image URL" className="form-input rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
+              </div>
+              <div>
+                <input name="domain" value={form.domain} onChange={handleChange} placeholder="Event Domain (e.g., AI, Sustainability)" className="form-input w-full rounded-lg border border-[#dcdce5] dark:border-[#2a2a30] p-3 bg-white dark:bg-[#23232b] text-[#111118] dark:text-white" />
               </div>
               {error && <div className="text-red-500">{error}</div>}
               {success && <div className="text-green-600">{success}</div>}

@@ -20,8 +20,11 @@ exports.login = async (req, res, next) => {
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(400).json({ message: 'Invalid credentials' });
-    const token = jwt.sign({ id: user.user_id, role: 'user' }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user });
+    // Elevate to judge if any active judge assignment exists
+    const isJudge = await azure.isUserJudge(user.user_id);
+    const role = isJudge ? 'judge' : 'user';
+    const token = jwt.sign({ id: user.user_id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token, user, role });
   } catch (err) { next(err); }
 };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { fetchEventById } from "../api/events";
 
@@ -8,6 +8,8 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [countdownTarget, setCountdownTarget] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -31,6 +33,47 @@ export default function EventDetail() {
     return () => { mounted = false; };
   }, [id]);
 
+  // Choose countdown target: before start -> start_date, during -> end_date, else none
+  useEffect(() => {
+    if (!event) return;
+    const now = new Date();
+    const start = event.start_date ? new Date(event.start_date) : null;
+    const end = event.end_date ? new Date(event.end_date) : null;
+    let target = null;
+    if (start && now < start) target = start;
+    else if (end && start && now >= start && now < end) target = end;
+    setCountdownTarget(target);
+
+    if (!target) return;
+    const tick = () => {
+      const current = new Date();
+      const diffMs = Math.max(0, target.getTime() - current.getTime());
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const days = Math.floor(totalSeconds / (3600 * 24));
+      const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      setTimeLeft({ days, hours, minutes, seconds });
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [event]);
+
+  const timeline = useMemo(() => {
+    if (!event) return [];
+    const start = event.start_date ? new Date(event.start_date) : null;
+    const end = event.end_date ? new Date(event.end_date) : null;
+    const midpoint = start && end ? new Date((start.getTime() + end.getTime()) / 2) : null;
+    const fmt = (d) => d ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(d) : "TBA";
+    return [
+      { icon: "calendar", label: "Opening Ceremony & Team Formation", date: fmt(start) },
+      { icon: "clock", label: "Hacking Begins", date: fmt(start) },
+      { icon: "clock", label: "Midpoint Check-in", date: fmt(midpoint) },
+      { icon: "trophy", label: "Demo Day & Awards", date: fmt(end) },
+    ];
+  }, [event]);
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-[#636388] dark:text-[#b3b3c6]">Loading event...</p></div>;
   }
@@ -42,6 +85,7 @@ export default function EventDetail() {
       </div>
     );
   }
+  const formatUnit = (n) => String(n ?? 0).padStart(2, '0');
   return (
     <div className="relative flex size-full min-h-screen flex-col bg-white dark:bg-[#111118] group/design-root overflow-x-hidden" style={{ fontFamily: 'Space Grotesk, Noto Sans, sans-serif' }}>
       <div className="layout-container flex h-full grow flex-col">
@@ -91,62 +135,34 @@ export default function EventDetail() {
             <p className="text-[#111118] dark:text-white text-base font-normal leading-normal pb-3 pt-1 px-4">{event.overview || event.description || ''}</p>
             <h2 className="text-[#111118] dark:text-white text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Timeline</h2>
             <div className="grid grid-cols-[40px_1fr] gap-x-2 px-4">
-              <div className="flex flex-col items-center gap-1 pt-3">
-                <div className="text-[#111118] dark:text-white" data-icon="Calendar" data-size="24px" data-weight="regular">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-96-88v64a8,8,0,0,1-16,0V132.94l-4.42,2.22a8,8,0,0,1-7.16-14.32l16-8A8,8,0,0,1,112,120Zm59.16,30.45L152,176h16a8,8,0,0,1,0,16H136a8,8,0,0,1-6.4-12.8l28.78-38.37A8,8,0,1,0,145.07,132a8,8,0,1,1-13.85-8A24,24,0,0,1,176,136,23.76,23.76,0,0,1,171.16,150.45Z"></path>
-                  </svg>
-                </div>
-                <div className="w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2 grow"></div>
-              </div>
-              <div className="flex flex-1 flex-col py-3">
-                <p className="text-[#111118] dark:text-white text-base font-medium leading-normal">Opening Ceremony & Team Formation</p>
-                <p className="text-[#636388] dark:text-[#b3b3c6] text-base font-normal leading-normal">July 15, 2024, 9:00 AM</p>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2"></div>
-                <div className="text-[#111118] dark:text-white" data-icon="Clock" data-size="24px" data-weight="regular">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"></path>
-                  </svg>
-                </div>
-                <div className="w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2 grow"></div>
-              </div>
-              <div className="flex flex-1 flex-col py-3">
-                <p className="text-[#111118] dark:text-white text-base font-medium leading-normal">Hacking Begins</p>
-                <p className="text-[#636388] dark:text-[#b3b3c6] text-base font-normal leading-normal">July 15, 2024, 10:00 AM</p>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2"></div>
-                <div className="text-[#111118] dark:text-white" data-icon="Clock" data-size="24px" data-weight="regular">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"></path>
-                  </svg>
-                </div>
-                <div className="w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2 grow"></div>
-              </div>
-              <div className="flex flex-1 flex-col py-3">
-                <p className="text-[#111118] dark:text-white text-base font-medium leading-normal">Midpoint Check-in</p>
-                <p className="text-[#636388] dark:text-[#b3b3c6] text-base font-normal leading-normal">July 16, 2024, 2:00 PM</p>
-              </div>
-              <div className="flex flex-col items-center gap-1 pb-3">
-                <div className="w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2"></div>
-                <div className="text-[#111118] dark:text-white" data-icon="Trophy" data-size="24px" data-weight="regular">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256">
-                    <path d="M232,64H208V56a16,16,0,0,0-16-16H64A16,16,0,0,0,48,56v8H24A16,16,0,0,0,8,80V96a40,40,0,0,0,40,40h3.65A80.13,80.13,0,0,0,120,191.61V216H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16H136V191.58c31.94-3.23,58.44-25.64,68.08-55.58H208a40,40,0,0,0,40-40V80A16,16,0,0,0,232,64ZM48,120A24,24,0,0,1,24,96V80H48v32q0,4,.39,8Zm144-8.9c0,35.52-28.49,64.64-63.51,64.9H128a64,64,0,0,1-64-64V56H192ZM232,96a24,24,0,0,1-24,24h-.5a81.81,81.81,0,0,0,.5-8.9V80h24Z"></path>
-                  </svg>
-                </div>
-              </div>
-              <div className="flex flex-1 flex-col py-3">
-                <p className="text-[#111118] dark:text-white text-base font-medium leading-normal">Demo Day & Awards</p>
-                <p className="text-[#636388] dark:text-[#b3b3c6] text-base font-normal leading-normal">July 17, 2024, 10:00 AM</p>
-              </div>
+              {timeline.map((item, idx) => (
+                <React.Fragment key={idx}>
+                  <div className={`flex flex-col items-center gap-1 ${idx === 0 ? 'pt-3' : ''} ${idx === timeline.length - 1 ? 'pb-3' : ''}`}>
+                    <div className="text-[#111118] dark:text-white" data-size="24px" data-weight="regular">
+                      {item.icon === 'calendar' && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Zm-96-88v64a8,8,0,0,1-16,0V132.94l-4.42,2.22a8,8,0,0,1-7.16-14.32l16-8A8,8,0,0,1,112,120Zm59.16,30.45L152,176h16a8,8,0,0,1,0,16H136a8,8,0,0,1-6.4-12.8l28.78-38.37A8,8,0,1,0,145.07,132a8,8,0,1,1-13.85-8A24,24,0,0,1,176,136,23.76,23.76,0,0,1,171.16,150.45Z"></path></svg>
+                      )}
+                      {item.icon === 'clock' && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"></path></svg>
+                      )}
+                      {item.icon === 'trophy' && (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor" viewBox="0 0 256 256"><path d="M232,64H208V56a16,16,0,0,0-16-16H64A16,16,0,0,0,48,56v8H24A16,16,0,0,0,8,80V96a40,40,0,0,0,40,40h3.65A80.13,80.13,0,0,0,120,191.61V216H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16H136V191.58c31.94-3.23,58.44-25.64,68.08-55.58H208a40,40,0,0,0,40-40V80A16,16,0,0,0,232,64ZM48,120A24,24,0,0,1,24,96V80H48v32q0,4,.39,8Zm144-8.9c0,35.52-28.49,64.64-63.51,64.9H128a64,64,0,0,1-64-64V56H192ZM232,96a24,24,0,0,1-24,24h-.5a81.81,81.81,0,0,0,.5-8.9V80h24Z"></path></svg>
+                      )}
+                    </div>
+                    <div className={`w-[1.5px] bg-[#dcdce5] dark:bg-[#2a2a30] h-2 ${idx === timeline.length - 1 ? '' : 'grow'}`}></div>
+                  </div>
+                  <div className="flex flex-1 flex-col py-3">
+                    <p className="text-[#111118] dark:text-white text-base font-medium leading-normal">{item.label}</p>
+                    <p className="text-[#636388] dark:text-[#b3b3c6] text-base font-normal leading-normal">{item.date}</p>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
           </div>
           <div className="layout-content-container flex flex-col w-[360px]">
             <div className="flex px-4 py-3">
               <Link
-                to="/register"
+                to={`/register?eventId=${event.event_id || event.id}`}
                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 flex-1 bg-[#686aed] text-white text-base font-bold leading-normal tracking-[0.015em]"
               >
                 <span className="truncate">Register Now</span>
@@ -155,25 +171,25 @@ export default function EventDetail() {
             <div className="flex gap-4 py-6 px-4">
               <div className="flex grow basis-0 flex-col items-stretch gap-4">
                 <div className="flex h-14 grow items-center justify-center rounded-lg px-3 bg-[#f0f0f4] dark:bg-[#23232b]">
-                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">15</p>
+                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{countdownTarget ? formatUnit(timeLeft.days) : '--'}</p>
                 </div>
                 <div className="flex items-center justify-center"><p className="text-[#111118] dark:text-white text-sm font-normal leading-normal">Days</p></div>
               </div>
               <div className="flex grow basis-0 flex-col items-stretch gap-4">
                 <div className="flex h-14 grow items-center justify-center rounded-lg px-3 bg-[#f0f0f4] dark:bg-[#23232b]">
-                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">00</p>
+                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{countdownTarget ? formatUnit(timeLeft.hours) : '--'}</p>
                 </div>
                 <div className="flex items-center justify-center"><p className="text-[#111118] dark:text-white text-sm font-normal leading-normal">Hours</p></div>
               </div>
               <div className="flex grow basis-0 flex-col items-stretch gap-4">
                 <div className="flex h-14 grow items-center justify-center rounded-lg px-3 bg-[#f0f0f4] dark:bg-[#23232b]">
-                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">00</p>
+                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{countdownTarget ? formatUnit(timeLeft.minutes) : '--'}</p>
                 </div>
                 <div className="flex items-center justify-center"><p className="text-[#111118] dark:text-white text-sm font-normal leading-normal">Minutes</p></div>
               </div>
               <div className="flex grow basis-0 flex-col items-stretch gap-4">
                 <div className="flex h-14 grow items-center justify-center rounded-lg px-3 bg-[#f0f0f4] dark:bg-[#23232b]">
-                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">00</p>
+                  <p className="text-[#111118] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{countdownTarget ? formatUnit(timeLeft.seconds) : '--'}</p>
                 </div>
                 <div className="flex items-center justify-center"><p className="text-[#111118] dark:text-white text-sm font-normal leading-normal">Seconds</p></div>
               </div>

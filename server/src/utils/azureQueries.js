@@ -80,6 +80,21 @@ exports.getUserById = async (user_id) => {
   return result.recordset[0];
 };
 
+// Search users by name or email (prefix/substring)
+exports.searchUsers = async (query) => {
+  const sqlPool = await getPool();
+  const like = `%${query}%`;
+  const result = await sqlPool.request()
+    .input('q', sql.NVarChar, like)
+    .query(`
+      SELECT TOP 10 user_id, name, email, organization, university
+      FROM Users
+      WHERE name LIKE @q OR email LIKE @q
+      ORDER BY name ASC
+    `);
+  return result.recordset;
+};
+
 // EVENTS
 exports.createEvent = async (event) => {
   const sqlPool = await getPool();
@@ -220,6 +235,18 @@ exports.getUserRoleForEvent = async (user_id, event_id) => {
   return result.recordset[0]?.role || null;
 };
 
+// Check if user is an active judge for any event
+exports.isUserJudge = async (user_id) => {
+  const sqlPool = await getPool();
+  const result = await sqlPool.request()
+    .input('user_id', sql.Int, user_id)
+    .query(`
+      SELECT COUNT(*) as count FROM UserEventRoles 
+      WHERE user_id = @user_id AND role = 'judge' AND permissions = 'active'
+    `);
+  return result.recordset[0].count > 0;
+};
+
 // TEAMS
 exports.createTeam = async (team) => {
   const sqlPool = await getPool();
@@ -289,6 +316,34 @@ exports.getUserEventRoles = async (user_id, event_id) => {
     .input('event_id', sql.Int, event_id)
     .query('SELECT * FROM UserEventRoles WHERE user_id = @user_id AND event_id = @event_id');
   return result.recordset;
+};
+
+// Get pending judge invitations for a user
+exports.getPendingInvitesForUser = async (user_id) => {
+  const sqlPool = await getPool();
+  const result = await sqlPool.request()
+    .input('user_id', sql.Int, user_id)
+    .query(`
+      SELECT uer.event_id, uer.role, uer.permissions, e.title, e.start_date, e.end_date
+      FROM UserEventRoles uer
+      JOIN Events e ON e.event_id = uer.event_id
+      WHERE uer.user_id = @user_id AND uer.role = 'judge' AND uer.permissions = 'pending'
+    `);
+  return result.recordset;
+};
+
+// Update permissions/status for a user's role on an event (e.g., pending -> active)
+exports.setUserEventRolePermissions = async ({ user_id, event_id, permissions }) => {
+  const sqlPool = await getPool();
+  await sqlPool.request()
+    .input('user_id', sql.Int, user_id)
+    .input('event_id', sql.Int, event_id)
+    .input('permissions', sql.NVarChar, permissions)
+    .query(`
+      UPDATE UserEventRoles
+      SET permissions = @permissions
+      WHERE user_id = @user_id AND event_id = @event_id
+    `);
 };
 
 // SCORES
