@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Keep minimal resets; design is Tailwind-driven */
+html, body, #root {
+  height: 100%;
+}
+
+/* Dark mode surface/background overrides for raw hex utilities used in layout */
+.dark body {
+  background-color: #111118;
+}
+.dark .text-\[\#111118\] { color: #ffffff !important; }
+.dark .bg-\[\#f0f0f4\] { background-color: #1f1f24 !important; }
+.dark .border-b-\[\#f0f0f4\] { border-bottom-color: #2a2a30 !important; }
+.dark .border-\[\#dcdce5\] { border-color: #2a2a30 !important; }
+.dark .text-\[\#636388\] { color: #a1a1b5 !important; }
+
+/* Form controls in dark mode */
+.dark input:not([type="radio"]):not([type="checkbox"]),
+.dark textarea,
+.dark select {
+  background-color: #1f1f24 !important;
+  color: #ffffff !important;
+  border-color: #2a2a30 !important;
+}
+.dark input:not([type="radio"]):not([type="checkbox"])::placeholder,
+.dark textarea::placeholder,
+.dark select::placeholder {
+  color: #a1a1b5 !important;
+}
