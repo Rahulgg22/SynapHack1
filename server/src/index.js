@@ -6,7 +6,8 @@ const { connectAzureSQL } = require('./config/azure');
 const app = express();
 // Enable CORS for frontend
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: "https://synap-hack1.vercel.app",
+  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
 
